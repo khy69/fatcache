@@ -20,6 +20,7 @@
 
 struct logger {
     char *name;  /* log file name */
+    //verbose
     int  level;  /* log level */
     int  fd;     /* log file descriptor */
     int  nerror; /* # log error */

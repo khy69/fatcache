@@ -19,8 +19,9 @@
 struct settings settings;          /* fatcache settings */
 
 static void set_options(){
-
+//least size of item,84kb at least
 #define FC_CHUNK_SIZE       ITEM_CHUNK_SIZE
+//1m default
 #define FC_SLAB_SIZE        SLAB_SIZE
 
 #define FC_DAEMONIZE        true
@@ -32,13 +33,16 @@ static void set_options(){
 #define FC_LOG_MAX          LOG_PVERB
 
 #define FC_PORT             11211
+  //to listen to all request from any ip
+  //127.0.0.1:only data pack from own machine
 #define FC_ADDR             "0.0.0.0"
-
+//number of bucket:2^N
 #define FC_HASH_POWER       ITEMX_HASH_POWER
-
+//slab class increasing factor
 #define FC_FACTOR           1.25
 
 #define FC_INDEX_MEMORY     (64 * MB)
+  //slab in memory
 #define FC_SLAB_MEMORY      (64 * MB)
 
 #define FC_SERVER_ID        0
@@ -47,6 +51,7 @@ static void set_options(){
     settings.daemonize = FC_DAEMONIZE;
 
     settings.log_filename = FC_LOG_FILE;
+    //what?
     settings.verbose = 6;//11;//FC_LOG_DEFAULT;
 
     settings.port = FC_PORT;
@@ -72,12 +77,14 @@ static void set_options(){
 static rstatus_t
 fc_generate_profile(void)
 {
+  //specify size of item on every level of slab class
     size_t *profile = settings.profile; /* slab profile */
     uint8_t id;                         /* slab class id */
     size_t item_sz, last_item_sz;       /* current and last item chunk size */
     size_t min_item_sz, max_item_sz;    /* min and max item chunk size */
 
     ASSERT(settings.chunk_size % FC_ALIGNMENT == 0);
+    //slab_data_size:get max size of a item in a slab
     ASSERT(settings.chunk_size <= slab_data_size());
 
     min_item_sz = settings.chunk_size;
@@ -96,6 +103,7 @@ fc_generate_profile(void)
         if (item_sz == last_item_sz) {
             item_sz++;
         }
+        //updated by factor and need to be aligned
         item_sz = FC_ALIGN(item_sz, FC_ALIGNMENT);
     }
 
@@ -109,17 +117,17 @@ fc_generate_profile(void)
 
 rstatus_t init(){
     rstatus_t status;
-
+    //init logger
     status = log_init(settings.verbose, settings.log_filename);
     if (status != FC_OK) {
         return status;
     }
-    
+      //time recorder
     status = time_init();
     if (status != FC_OK) {
         return status;
     }
-    
+    //index
     status = itemx_init();
     if (status != FC_OK) {
         return status;
@@ -136,7 +144,9 @@ rstatus_t init(){
 }
 
 int put(char* key, int nkey, char* value, int vlen, int expiry, int flags){
+  //for item
     uint8_t  md[20];
+    //for itemx
     uint32_t hash;
 
     uint8_t * tmp_key = key;
@@ -280,6 +290,8 @@ int main(int argc, char** argv){
     char *ret=NULL;
     int vl = 0;
     if (argc > 1){
+      //the first one is program name by default
+      //Argv[0] is the name of the program , After that till argv[argc-1] every element is command -line arguments.
         printf("%u\n", strlen(argv[1]));
         vl =  strlen(argv[1]);
         value = malloc((strlen(argv[1])+1) * sizeof(char));

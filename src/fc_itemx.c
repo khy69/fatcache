@@ -16,14 +16,15 @@
  */
 
 #include <fc_core.h>
-
+//ull->unsigned long long,convert type of constant
 #define HASHSIZE(_n)    (1ULL << (_n))
 #define HASHMASK(_n)    (HASHSIZE(_n) - 1)
 
 extern struct settings settings;
-
+//total number of all itemx
 static uint64_t nitx;                /* # item index */
 static uint64_t nitx_table;          /* # item index table entries */
+//itemx_tqh:a bucket
 static struct itemx_tqh *itx_table;  /* item index table */
 
 static uint64_t nalloc_itemx;        /* # nalloc itemx */
@@ -113,13 +114,16 @@ itemx_init(void)
     itx_table = NULL;
 
     nfree_itemxq = 0;
+    //init queue
     STAILQ_INIT(&free_itemxq);
 
     istart = NULL;
     iend = NULL;
 
     /* init item index table */
+    //number of bucket
     nitx_table = HASHSIZE(settings.hash_power);
+    //a whole space for hashtable
     itx_table = fc_alloc(sizeof(*itx_table) * nitx_table);
     if (itx_table == NULL) {
         return FC_ENOMEM;
@@ -127,7 +131,7 @@ itemx_init(void)
     for (i = 0ULL; i < nitx_table; i++) {
         STAILQ_INIT(&itx_table[i]);
     }
-
+    
     n = settings.max_index_memory / sizeof(struct itemx);
 
     /* init item index memory */
@@ -135,10 +139,12 @@ itemx_init(void)
     if (itx == NULL) {
         return FC_ENOMEM;
     }
+    //set information directly from memory
     istart = itx;
     iend = itx + n;
-
+    
     for (itx = istart; itx < iend; itx++) {
+      //all empty itemx are in a same bucket
         itemx_put(itx);
     }
     nalloc_itemx = n;
@@ -180,7 +186,9 @@ itemx_bucket(uint32_t hash)
 
     return bucket;
 }
-
+/*
+find the itemx from index
+*/
 struct itemx *
 itemx_getx(uint32_t hash, uint8_t *md)
 {
@@ -188,7 +196,7 @@ itemx_getx(uint32_t hash, uint8_t *md)
     struct itemx *itx;
 
     bucket = itemx_bucket(hash);
-
+//iteration
     STAILQ_FOREACH(itx, bucket, tqe) {
         if (memcmp(itx->md, md, sizeof(itx->md)) == 0) {
             break;
@@ -221,7 +229,9 @@ itemx_putx(uint32_t hash, uint8_t *md, uint32_t sid, uint32_t offset,
     STAILQ_INSERT_HEAD(bucket, itx, tqe);
     slab_incr_chunks_by_sid(itx->sid, 1);
 }
-
+/*
+delete item index
+*/
 bool
 itemx_removex(uint32_t hash, uint8_t *md)
 {
@@ -235,9 +245,11 @@ itemx_removex(uint32_t hash, uint8_t *md)
 
     bucket = itemx_bucket(hash);
     nitx--;
+    //remove itemx
     STAILQ_REMOVE(bucket, itx, itemx, tqe);
+    //logically delete
     slab_incr_chunks_by_sid(itx->sid, -1);
-
+    //logically think it as free
     itemx_put(itx);
 
     return true;

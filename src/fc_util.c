@@ -262,7 +262,7 @@ fc_device_size(const char *path, size_t *size)
     int status;            /* return status */
     struct stat statinfo;  /* stat info */
     int fd;                /* file descriptor */
-
+//get file status
     status = stat(path, &statinfo);
     if (status < 0) {
         log_error("stat '%s' failed: %s", path, strerror(errno));
@@ -275,6 +275,8 @@ fc_device_size(const char *path, size_t *size)
     }
 
     if (S_ISREG(statinfo.st_mode)) {
+      //a regular file
+      //TODO:what if an empty file?
         *size = (size_t)statinfo.st_size;
         return FC_OK;
     }
@@ -284,7 +286,7 @@ fc_device_size(const char *path, size_t *size)
         log_error("open '%s' failed: %s", path, strerror(errno));
         return FC_ERROR;
     }
-
+    //get divice size
     status = ioctl(fd, BLKGETSIZE64, size);
     if (status < 0) {
         close(fd);
@@ -644,6 +646,15 @@ _fc_mmap(size_t size, const char *name, int line)
      * the value MAP_FAILED (that is, (void *) -1) is returned, and errno
      * is set appropriately.
      */
+    //void *mmap(void *addr, size_t length, int prot, int flags,
+    //           int fd, off_t offset);
+    //creates a new mapping in the virtual address space
+    //The starting address for the new mapping is
+    //specified in addr.  The length argument specifies the length of
+    //the mapping (which must be greater than 0).
+    //If addr is NULL, then the kernel chooses the (page-aligned)
+    //address at which to create the mapping（automatically）; this is the most portable
+    //method of creating a new mapping.
     p = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS,
              -1, 0);
     if (p == ((void *) -1)) {

@@ -53,6 +53,8 @@ static time_t process_started;
  *
  * So, now actually holds 32-bit seconds since the server start time.
  */
+//reduce system calls and use less time count
+//volatile:can't optimized by compiler and you will operate on its memory directly everytime
 static volatile rel_time_t now;
 
 void
@@ -154,14 +156,17 @@ rstatus_t
 time_init(void)
 {
     int status;
+    //the data type used to uniquely identify a thread
     pthread_t tid;
 
     /*
      * Make the time we started always be 2 seconds before we really
-     * did, so time_now(0) - time.started is never zero. If so, things
+     * did, so time_now(0) - time.started is never zero. 
+     TODO:If so, things
      * like 'settings.oldest_live' which act as booleans as well as
-     * values are now false in boolean context.
+     * values are now false in boolean context.??
      */
+    //time(null) returns current time
     process_started = time(NULL) - 2;
 
     log_debug(LOG_DEBUG, "process started at %"PRId64, (int64_t)process_started);

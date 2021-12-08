@@ -21,12 +21,14 @@
 #define ITEMX_HASH_POWER    20
 
 struct itemx {
+  //next
     STAILQ_ENTRY(itemx) tqe;    /* link in index / free q */
     uint8_t             md[20]; /* sha1 message digest */
     uint32_t            sid;    /* owner slab id */
     uint32_t            offset; /* item offset from owner slab base */
     rel_time_t          expiry; /* expiry in secs */
     uint64_t            cas;    /* cas */
+    //why?
 } __attribute__ ((__packed__));
 
 STAILQ_HEAD(itemx_tqh, itemx);

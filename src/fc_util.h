@@ -70,7 +70,9 @@
  * Make data 'd' or pointer 'p', n-byte aligned, where n is a power of 2
  * of 2.
  */
+//sizeof:byte of type
 #define FC_ALIGNMENT        sizeof(unsigned long) /* platform word */
+//aligned by unsigned long bytes
 #define FC_ALIGN(d, n)      ((size_t)(((d) + (n - 1)) & ~(n - 1)))
 #define FC_ALIGN_PTR(p, n)  \
     (void *) (((uintptr_t) (p) + ((uintptr_t) n - 1)) & ~((uintptr_t) n - 1))

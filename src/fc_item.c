@@ -47,9 +47,9 @@ item_slabcid(uint8_t nkey, uint32_t ndata)
 {
     size_t ntotal;
     uint8_t cid;
-
+//a dynamic size which equals all item metadata and key+value
     ntotal = item_ntotal(nkey, ndata);
-
+//find a appropriate slabclass
     cid = slab_cid(ntotal);
     if (cid == SLABCLASS_INVALID_ID) {
         log_debug(LOG_NOTICE, "slab class id out of range with %"PRIu8" bytes "

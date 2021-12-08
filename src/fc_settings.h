@@ -17,7 +17,7 @@ struct settings {
     size_t   chunk_size;                   /* minimum item chunk size */
     size_t   max_chunk_size;               /* maximum item chunk size */
     size_t   slab_size;                    /* slab size */
-
+//store the size of item in this level
     size_t   profile[SLABCLASS_MAX_IDS];   /* slab profile */
     uint8_t  profile_last_id;              /* last id in slab profile */
 

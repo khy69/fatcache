@@ -33,6 +33,7 @@ static uint8_t nctable;                /* # class table entry */
 static struct slabclass *ctable;       /* table of slabclass indexed by cid */
 
 static uint32_t nstable;               /* # slab table entry */
+//memory + disk
 static struct slabinfo *stable;        /* table of slabinfo indexed by sid */
 
 static uint8_t *mstart;                /* memory slab start */
@@ -48,6 +49,7 @@ static uint32_t nmslab;                /* # memory slabs */
 static uint32_t ndslab;                /* # disk slabs */
 
 static uint64_t nevict;
+//buffer for what and why use integer?
 static uint8_t *evictbuf;              /* evict buffer */
 static uint8_t *readbuf;               /* read buffer */
 
@@ -150,6 +152,9 @@ slab_full(struct slabinfo *sinfo)
  * Return and optionally verify the memory slab with the given slab_size
  * offset from base mstart.
  */
+/*
+find a slab position in memory
+*/
 static void *
 slab_from_maddr(uint32_t addr, bool verify)
 {
@@ -174,6 +179,9 @@ slab_from_maddr(uint32_t addr, bool verify)
  * Return the slab_size offset for the given disk slab from the base
  * of the disk.
  */
+/*
+get the disk slab position
+*/
 static off_t
 slab_to_daddr(struct slabinfo *sinfo)
 {
@@ -220,10 +228,10 @@ slab_evict(void)
     off_t off;              /* offset */
     int n;                  /* read bytes */
     uint32_t idx;           /* idx^th item */
-
+    //all full slab
     ASSERT(!TAILQ_EMPTY(&full_dsinfoq));
     ASSERT(nfull_dsinfoq > 0);
-
+//logically delete on disk
     sinfo = TAILQ_FIRST(&full_dsinfoq);
     nfull_dsinfoq--;
     TAILQ_REMOVE(&full_dsinfoq, sinfo, tqe);
@@ -234,6 +242,7 @@ slab_evict(void)
     slab = (struct slab *)evictbuf;
     size = settings.slab_size;
     off = slab_to_daddr(sinfo);
+    //On success, pread() returns the number of bytes read
     n = pread(fd, slab, size, off);
     if (n < size) {
         log_error("pread fd %d %zu bytes at offset %"PRIu64" failed: %s", fd,
@@ -283,7 +292,9 @@ slab_swap_addr(struct slabinfo *msinfo, struct slabinfo *dsinfo)
     dsinfo->addr = m_addr;
     dsinfo->mem = 1;
 }
-
+/*
+push a slab into disk
+*/
 static rstatus_t
 _slab_drain(void)
 {
@@ -328,7 +339,7 @@ _slab_drain(void)
     log_debug(LOG_DEBUG, "drain slab at memory (sid %"PRIu32" addr %"PRIu32") "
               "to disk (sid %"PRIu32" addr %"PRIu32")", msinfo->sid,
               msinfo->addr, dsinfo->sid, dsinfo->addr);
-
+    //are you too tedious?
     /* swap msinfo <> dsinfo addresses */
     slab_swap_addr(msinfo, dsinfo);
 
@@ -342,12 +353,14 @@ _slab_drain(void)
 
     return FC_OK;
 }
-
+/*
+push a slab from memroy to disk
+*/
 static rstatus_t
 slab_drain(void)
 {
     rstatus_t status;
-
+    //whether disk has free slab
     if (!TAILQ_EMPTY(&free_dsinfoq)) {
         ASSERT(nfree_dsinfoq > 0);
         return _slab_drain();
@@ -363,7 +376,7 @@ slab_drain(void)
 
     return _slab_drain();
 }
-
+//get a item from a partial memory slab
 static struct item *
 _slab_get_item(uint8_t cid)
 {
@@ -399,7 +412,9 @@ _slab_get_item(uint8_t cid)
 
     return it;
 }
-
+/*
+get a item from slab
+*/
 struct item *
 slab_get_item(uint8_t cid)
 {
@@ -410,18 +425,19 @@ slab_get_item(uint8_t cid)
 
     ASSERT(cid >= SLABCLASS_MIN_ID && cid < nctable);
     c = &ctable[cid];
-
+    //no free itemx
     if (itemx_empty()) {
+      //delete the oldest slab on disk
         status = slab_evict();
         if (status != FC_OK) {
             return NULL;
         }
     }
-
+//no need to divide a new slab
     if (!TAILQ_EMPTY(&c->partial_msinfoq)) {
         return _slab_get_item(cid);
     }
-
+//2021:12.8,11:46----------------------------------------------------------------
     if (!TAILQ_EMPTY(&free_msinfoq)) {
         /* move memory slab from free to partial q */
         sinfo = TAILQ_FIRST(&free_msinfoq);
@@ -447,13 +463,13 @@ slab_get_item(uint8_t cid)
         /* unused[] is left uninitialized */
         slab->sid = sinfo->sid;
         /* data[] is initialized on-demand */
-
+        //consider it as a partial slab
         return _slab_get_item(cid);
     }
 
     ASSERT(!TAILQ_EMPTY(&full_msinfoq));
     ASSERT(nfull_msinfoq > 0);
-
+//no partial and free slab for memory
     status = slab_drain();
     if (status != FC_OK) {
         return NULL;
@@ -576,6 +592,7 @@ slab_init_stable(void)
         sinfo->mem = 1;
 
         nfree_msinfoq++;
+        //all free memory slab
         TAILQ_INSERT_TAIL(&free_msinfoq, sinfo, tqe);
     }
 
@@ -660,12 +677,13 @@ slab_init(void)
         return FC_ENOMEM;
     }
     mend = mstart + mspace;
-
+//2021,12,3 17:06------------------------------------------------------------
     /* init ndslab, dstart and dend */
     status = fc_device_size(settings.ssd_device, &size);
     if (status != FC_OK) {
         return status;
     }
+    //TODO:share a disk?
     ndchunk = size / settings.slab_size;
     ASSERT(settings.server_n <= ndchunk);
     ndslab = ndchunk / settings.server_n;
@@ -674,12 +692,13 @@ slab_init(void)
     dend = ((settings.server_id + 1) * ndslab) * settings.slab_size;
 
     /* init disk descriptor */
+    //Direct disk access,write and read
     fd = open(settings.ssd_device, O_RDWR | O_DIRECT, 0644);
     if (fd < 0) {
         log_error("open '%s' failed: %s", settings.ssd_device, strerror(errno));
         return FC_ERROR;
     }
-
+//2021.12.4,11:16------------------------------------------------
     /* init slab table */
     status = slab_init_stable();
     if (status != FC_OK) {
@@ -687,6 +706,7 @@ slab_init(void)
     }
 
     /* init evictbuf and readbuf */
+    //buffer between memory and disk
     evictbuf = fc_mmap(settings.slab_size);
     if (evictbuf == NULL) {
         log_error("mmap %zu bytes failed: %s", settings.slab_size,
