@@ -47,7 +47,7 @@ item_slabcid(uint8_t nkey, uint32_t ndata)
 {
     size_t ntotal;
     uint8_t cid;
-//a dynamic size which equals all item metadata and key+value
+//a dynamic size which equals all item data and key+value
     ntotal = item_ntotal(nkey, ndata);
 //find a appropriate slabclass
     cid = slab_cid(ntotal);
@@ -59,7 +59,9 @@ item_slabcid(uint8_t nkey, uint32_t ndata)
 
     return cid;
 }
-
+/*
+get a free item
+*/
 struct item *
 item_get(uint8_t *key, uint8_t nkey, uint8_t cid, uint32_t ndata,
          rel_time_t expiry, uint32_t flags, uint8_t *md, uint32_t hash)
@@ -67,7 +69,7 @@ item_get(uint8_t *key, uint8_t nkey, uint8_t cid, uint32_t ndata,
     struct item *it;
 
     ASSERT(slab_valid_id(cid));
-
+    //get a free item to store kv
     it = slab_get_item(cid);
     if (it == NULL) {
         log_warn("server error on allocating item in slab %"PRIu8, cid);

@@ -161,6 +161,7 @@ fc_daemonize(int dump_core)
     int fd;
 
     /* 1st fork detaches child from terminal */
+    // Fork system call is used for creating a new process, which is called child process, which runs concurrently with the process that makes the fork() call (parent process). After a new child process is created, both processes will execute the next instruction following the fork() system call. A child process uses the same pc(program counter), same CPU registers, same open files which use in the parent process.
     pid = fork();
     switch (pid) {
     case -1:
@@ -176,10 +177,16 @@ fc_daemonize(int dump_core)
     }
 
     /* 1st child continues and becomes the session and process group leader */
+    // setsid() creates a new session if the calling process is not a
+    //    process group leader.  The calling process is the leader of the
+    //    new session (i.e., its session ID is made the same as its process
+    //    ID).
+    // let 1st child be in a new session
     sid = setsid();
     if (sid < 0) {
         return FC_ERROR;
     }
+    // sighup:Hangup detected on controlling terminal or death of controlling process
 
     if (signal(SIGHUP, SIG_IGN) == SIG_ERR) {
         log_error("signal(SIGHUP, SIG_IGN) failed: %s", strerror(errno));
@@ -694,10 +701,11 @@ int
 main(int argc, char **argv)
 {
     rstatus_t status;
+    //for epoll
     struct context ctx;
 
     fc_set_default_options();
-
+    //read command line paramemters
     status = fc_get_options(argc, argv);
     if (status != FC_OK) {
         fc_show_usage();

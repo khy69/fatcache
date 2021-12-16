@@ -70,7 +70,9 @@ itemx_empty(void)
 
     return false;
 }
-
+/*
+//get a free item
+*/
 static struct itemx *
 itemx_get(void)
 {
@@ -187,7 +189,7 @@ itemx_bucket(uint32_t hash)
     return bucket;
 }
 /*
-find the itemx from index
+search for item index
 */
 struct itemx *
 itemx_getx(uint32_t hash, uint8_t *md)
@@ -229,9 +231,7 @@ itemx_putx(uint32_t hash, uint8_t *md, uint32_t sid, uint32_t offset,
     STAILQ_INSERT_HEAD(bucket, itx, tqe);
     slab_incr_chunks_by_sid(itx->sid, 1);
 }
-/*
-delete item index
-*/
+
 bool
 itemx_removex(uint32_t hash, uint8_t *md)
 {

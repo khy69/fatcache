@@ -243,6 +243,7 @@ slab_evict(void)
     size = settings.slab_size;
     off = slab_to_daddr(sinfo);
     //On success, pread() returns the number of bytes read
+    //allocated by mmap,and you can control it using pointer
     n = pread(fd, slab, size, off);
     if (n < size) {
         log_error("pread fd %d %zu bytes at offset %"PRIu64" failed: %s", fd,
@@ -365,7 +366,7 @@ slab_drain(void)
         ASSERT(nfree_dsinfoq > 0);
         return _slab_drain();
     }
-
+    //delete a disk slab
     status = slab_evict();
     if (status != FC_OK) {
         return status;
@@ -413,7 +414,7 @@ _slab_get_item(uint8_t cid)
     return it;
 }
 /*
-get a item from slab
+get a item position from slab
 */
 struct item *
 slab_get_item(uint8_t cid)
@@ -469,12 +470,12 @@ slab_get_item(uint8_t cid)
 
     ASSERT(!TAILQ_EMPTY(&full_msinfoq));
     ASSERT(nfull_msinfoq > 0);
-//no partial and free slab for memory
+//no partial and free slab for memory,flursh to disk
     status = slab_drain();
     if (status != FC_OK) {
         return NULL;
     }
-
+    //try many times
     return slab_get_item(cid);
 }
 
@@ -513,7 +514,9 @@ slab_read_item(uint32_t sid, uint32_t addr)
     }
 
     off = slab_to_daddr(sinfo) + addr;
+    //for read alignment
     aligned_off = ROUND_DOWN(off, 512);
+    //to read complete item with redundancy
     aligned_size = ROUND_UP((c->size + (off - aligned_off)), 512);
 
     n = pread(fd, readbuf, aligned_size, aligned_off);
@@ -522,6 +525,7 @@ slab_read_item(uint32_t sid, uint32_t addr)
                   aligned_size, (uint64_t)aligned_off, strerror(errno));
         return NULL;
     }
+    //cut down redundancy
     it = (struct item *)(readbuf + (off - aligned_off));
 
 done:
@@ -802,7 +806,9 @@ slab_get_class_by_cid(uint8_t cid)
     }
     return &ctable[cid];
 }
-
+/*
+logically add or delete terms in slabclass
+*/
 bool
 slab_incr_chunks_by_sid(uint32_t sid, int n)
 {

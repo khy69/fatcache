@@ -23,6 +23,7 @@ struct slab {
     uint32_t  sid;       /* slab id */
     uint8_t   cid;       /* slab class id */
     uint8_t   unused[3]; /* unused */
+    // store all item
     uint8_t   data[1];   /* opaque data */
 };
 

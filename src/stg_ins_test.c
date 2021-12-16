@@ -223,6 +223,7 @@ int num(char *src_key, int src_key_len, int num, int expiry, int flags){
     struct itemx *itx;
     uint64_t cnum;
     int64_t nnum;
+    //usage?
     char numstr[FC_UINT64_MAXLEN];
     int n;
     

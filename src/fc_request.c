@@ -168,7 +168,7 @@ req_filter(struct context *ctx, struct conn *conn, struct msg *msg)
 
     return false;
 }
-
+//conn:sokect connection
 static void
 req_process_get(struct context *ctx, struct conn *conn, struct msg *msg)
 {
